@@ -2,7 +2,7 @@ class Condition:
     def __init__(self):
         self.state = False
         self.last_state = False
-    def o(self):
+    def __bool__(self):
         return self.state 
     def raising(self):
         return self.state and not self.last_state   
@@ -30,7 +30,7 @@ class Timer(Condition):
     def run(self,condition):
         value=False
         if condition :
-            if self.last_state == 0:
+            if not self.last_state:
                 self.cur_time = self.time_scan
             self.cur_time -= 1
             if self.cur_time <= 0:
@@ -38,8 +38,8 @@ class Timer(Condition):
                 self.cur_time = 0
         else:
             self.cur_time = self.time_scan
-        self.state = 1 if value else 0
-        self.last_state = 1 if condition else 0
+        self.state = value
+        self.last_state =  condition
 class Counter(Condition):
     def __init__(self,count = 100):
         super().__init__()
@@ -50,7 +50,7 @@ class Counter(Condition):
     def run(self,condition):
         value=False
         if condition :
-            if self.last_state == 0:
+            if not self.last_state:
                 self.cur_index = 0
             self.cur_index += 1
             if self.cur_index >= self.count:
@@ -58,8 +58,8 @@ class Counter(Condition):
                 self.cur_index = self.count
         else:
             self.cur_time = 0
-        self.state = 1 if value else 0
-        self.last_state = 1 if condition else 0
+        self.state = value
+        self.last_state = condition
 class AutoControl:
     def __init__(self,count = -1):
         self.conditions = []
@@ -69,8 +69,6 @@ class AutoControl:
         self.count = count
     def is_index(self,idx):
         return self.cur_index == idx
-    def get_bool(self,o):
-        return o.o() if isinstance(o,Condition) else o
     def shift(self,conditions,timers,reset = False):
         if len(conditions) < self.count:
             raise Exception ("conditions length must greator or equal to count")
@@ -85,15 +83,15 @@ class AutoControl:
             self.cur_index = 0
         i = self.cur_index
         b = self.is_index(i)
-        c = self.get_bool(conditions[i])
+        c = bool(conditions[i])
         bitCond = b and c
         isTimer = isinstance(timers[i] , Timer)
         timeOut = False
         if isTimer:
             timers[i].run(bitCond)
-            timeOut = timers[i].o()
+            timeOut = bool(timers[i])
         else:
-            timeOut = timers[i]; 
+            timeOut = timers[i]
         cond = bitCond and timeOut
         if cond:
             self.cur_index+=1
@@ -137,7 +135,7 @@ class AutoControl:
             condition.out(False)
         elif self.is_index(start):
             condition.out(True)
-        return condition.o()
+        return bool(condition)
     def keep_multi(self,condition,start,end = [],reset = False):
         if reset or not isinstance(condition,Condition):
             return False
@@ -154,7 +152,7 @@ class AutoControl:
             condition.out(False)
         elif start_m:
             condition.out(True)
-        return condition.o()        
+        return bool(condition)       
     def reset(self):
         self.cur_index = 0
         self.monitor = 0
